@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Phantom Net</string>
+    <string name="title_activity_main">Phantom Net</string>
+    <string name="package_name">com.phantomnet.dashboard</string>
+    <string name="custom_url_scheme">com.phantomnet.dashboard</string>
+</resources>
