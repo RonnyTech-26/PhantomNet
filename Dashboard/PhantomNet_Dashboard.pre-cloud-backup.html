@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phantom Net</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+  --bg:#0f1219; --card:#171b24; --card2:#1d2230; --line:#262c3a;
+  --txt:#e8edf4; --dim:#8b98ab; --faint:#5b6879;
+  --grn:#34d399; --amb:#fbbf24; --red:#f87171; --cyan:#22d3ee; --vio:#a78bfa;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--txt);min-height:100vh;
+  font:14px/1.5 -apple-system,"Segoe UI",Roboto,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------------- header ---------------- */
+header{
+  display:flex;align-items:center;gap:14px;padding:18px 28px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#161b26,#12161f);
+  position:sticky;top:0;z-index:500;
+}
+.mark{
+  width:38px;height:38px;border-radius:11px;
+  background:linear-gradient(135deg,var(--cyan),#6366f1);
+  display:grid;place-items:center;font-weight:800;color:#08121a;font-size:14px;
+}
+h1{font-size:18px;font-weight:650;letter-spacing:-.2px}
+.sub{font-size:11.5px;color:var(--faint);margin-top:1px}
+.status{
+  margin-left:auto;display:flex;align-items:center;gap:9px;
+  padding:8px 16px;border-radius:99px;font-size:12.5px;font-weight:600;
+  background:#1e1418;border:1px solid #4b2226;color:var(--red);
+}
+.status.on{background:#0f1e18;border-color:#1f5541;color:var(--grn)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.status.on .dot{animation:blip 1.8s infinite}
+@keyframes blip{0%,100%{opacity:1}50%{opacity:.3}}
+.btn{
+  padding:9px 18px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card2);color:var(--txt);font:inherit;font-size:13px;
+  font-weight:600;cursor:pointer;transition:.15s;
+}
+.btn:hover{background:#252b3b;border-color:#39415a}
+.btn.p{background:linear-gradient(135deg,var(--cyan),#6366f1);border:0;color:#06121b}
+.btn.p:hover{filter:brightness(1.1)}
+.btn.g{border-color:#3f3410;color:var(--amb)}
+
+/* ---------------- shell ---------------- */
+main{max-width:1180px;margin:0 auto;padding:26px 22px 60px}
+.hd{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.hd h2{font-size:20px;font-weight:650}
+.count{
+  font-size:12px;color:var(--dim);background:var(--card);
+  border:1px solid var(--line);padding:4px 11px;border-radius:99px;
+}
+
+/* ---------------- alert ---------------- */
+#alert{
+  display:none;align-items:center;gap:14px;padding:18px 22px;margin-bottom:20px;
+  border-radius:14px;background:linear-gradient(135deg,#2a0f14,#1c0d11);
+  border:1px solid #6b2126;animation:glow 1.4s infinite;
+}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.35)}
+                50%{box-shadow:0 0 0 12px rgba(248,113,113,0)}}
+#alert .ic{font-size:26px}
+#alert .t{font-size:16px;font-weight:700;color:var(--red)}
+#alert .d{font-size:13px;color:#fca5a5;margin-top:2px}
+
+/* ---------------- node grid ---------------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:16px}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:20px;cursor:pointer;transition:.18s;position:relative;overflow:hidden;
+}
+.card:hover{transform:translateY(-3px);border-color:#39415a;
+            box-shadow:0 12px 30px rgba(0,0,0,.4)}
+.card::before{content:'';position:absolute;inset:0 auto 0 0;width:4px;background:var(--grn)}
+.card.s1::before{background:var(--amb)}
+.card.s2::before,.card.s3::before{background:var(--red)}
+.card.off::before{background:#3f4759}
+.card.s2,.card.s3{border-color:#6b2126;animation:pulse 1.3s infinite}
+@keyframes pulse{0%,100%{background:var(--card)}50%{background:#241014}}
+.card.off{opacity:.55}
+
+.ctop{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+.cname{font-size:17px;font-weight:700}
+.cmeta{font-size:11.5px;color:var(--faint);margin-top:2px}
+.badge{font-size:11px;font-weight:700;padding:5px 11px;border-radius:99px;letter-spacing:.03em}
+.b0{background:#0f2620;color:var(--grn)}
+.b1{background:#2a2109;color:var(--amb)}
+.b2,.b3{background:#2c1114;color:var(--red)}
+.boff{background:#1e232e;color:#7b8697}
+
+.vitals{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.vit{text-align:center}
+.vit .n{font-size:22px;font-weight:700;line-height:1.1}
+.vit .l{font-size:10.5px;color:var(--faint);margin-top:4px;letter-spacing:.04em}
+.vit .n small{font-size:12px;color:var(--dim);font-weight:600}
+
+.cfoot{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:18px;padding-top:14px;border-top:1px solid var(--line);
+  font-size:11.5px;color:var(--faint);
+}
+.sig{display:flex;align-items:center;gap:5px}
+.bars{display:flex;align-items:flex-end;gap:2px;height:12px}
+.bars i{width:3px;background:#3b4457;border-radius:1px}
+.bars i.a{background:var(--grn)}
+.bars i:nth-child(1){height:4px}.bars i:nth-child(2){height:7px}
+.bars i:nth-child(3){height:10px}.bars i:nth-child(4){height:13px}
+
+.empty{
+  text-align:center;padding:80px 20px;color:var(--faint);
+  border:1px dashed var(--line);border-radius:16px;
+}
+.empty .ic{font-size:42px;margin-bottom:14px;opacity:.5}
+.empty h3{font-size:16px;color:var(--dim);font-weight:600;margin-bottom:6px}
+
+/* ---------------- detail ---------------- */
+#detail{display:none}
+.back{
+  display:inline-flex;align-items:center;gap:7px;color:var(--dim);
+  background:none;border:0;font:inherit;font-size:13.5px;cursor:pointer;
+  padding:6px 0;margin-bottom:16px;
+}
+.back:hover{color:var(--txt)}
+.dhead{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+.dhead h2{font-size:26px;font-weight:700}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:820px){.dgrid{grid-template-columns:1fr}}
+.box{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.box h3{font-size:13px;font-weight:650;padding:15px 19px;border-bottom:1px solid var(--line);
+        color:var(--dim);letter-spacing:.03em}
+.box .in{padding:19px}
+
+.stats4{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.sbox{background:var(--card2);border-radius:12px;padding:16px}
+.sbox .l{font-size:11px;color:var(--faint);letter-spacing:.05em}
+.sbox .n{font-size:28px;font-weight:700;margin-top:4px;line-height:1.05}
+.sbox .n small{font-size:13px;color:var(--dim);font-weight:600}
+
+.rows{display:flex;flex-direction:column;gap:11px}
+.row{display:flex;justify-content:space-between;font-size:13.5px}
+.row .k{color:var(--dim)}
+.row .v{font-weight:650}
+
+#map{height:300px;background:#12161f}
+.leaflet-container{background:#12161f}
+.nomap{display:grid;place-items:center;height:300px;color:var(--faint);
+       text-align:center;font-size:13px;padding:20px}
+
+#spark{width:100%;height:70px;display:block}
+
+footer{
+  text-align:center;padding:22px;color:var(--faint);font-size:11.5px;
+  border-top:1px solid var(--line);
+}
+.hint{background:#2a2109;border:1px solid #4b3d10;color:#fcd34d;padding:12px 16px;
+      border-radius:11px;font-size:12.5px;margin-bottom:18px;display:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="mark">PN</div>
+  <div>
+    <h1>Phantom Net</h1>
+    <div class="sub">Wearable safety mesh</div>
+  </div>
+  <div class="status" id="pill"><span class="dot"></span><span id="pillt">Not connected</span></div>
+  <button class="btn p" id="bConn">Connect gateway</button>
+  <button class="btn g" id="bSim">Demo</button>
+</header>
+
+<main>
+  <div class="hint" id="hint"></div>
+
+  <!-- ============ LIST VIEW ============ -->
+  <div id="list">
+    <div id="alert">
+      <div class="ic">🚨</div>
+      <div>
+        <div class="t" id="alertT"></div>
+        <div class="d" id="alertD"></div>
+      </div>
+    </div>
+
+    <div class="hd">
+      <h2>Nodes</h2>
+      <span class="count" id="count">0 online</span>
+      <button class="btn" id="bCsv" style="margin-left:auto;font-size:12px;padding:7px 14px">Export data</button>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="empty" id="empty">
+      <div class="ic">📡</div>
+      <h3>Waiting for nodes</h3>
+      <div>Connect the gateway over USB, or press Demo to preview.</div>
+    </div>
+  </div>
+
+  <!-- ============ DETAIL VIEW ============ -->
+  <div id="detail">
+    <button class="back" id="bBack">← All nodes</button>
+
+    <div class="dhead">
+      <h2 id="dName">Node</h2>
+      <span class="badge" id="dBadge">--</span>
+      <span style="margin-left:auto;color:var(--faint);font-size:12.5px" id="dSeen"></span>
+    </div>
+
+    <div class="dgrid">
+      <div class="box">
+        <h3>Vitals</h3>
+        <div class="in">
+          <div class="stats4">
+            <div class="sbox"><div class="l">HEART RATE</div>
+              <div class="n" id="dHr">--<small> bpm</small></div></div>
+            <div class="sbox"><div class="l">BLOOD OXYGEN</div>
+              <div class="n" id="dSpo">--<small> %</small></div></div>
+            <div class="sbox"><div class="l">MOTION</div>
+              <div class="n" id="dAcc">--<small> g</small></div></div>
+            <div class="sbox"><div class="l">BATTERY</div>
+              <div class="n" id="dBat">--<small> %</small></div></div>
+          </div>
+          <div style="margin-top:18px">
+            <div style="font-size:11px;color:var(--faint);margin-bottom:6px">HEART RATE TREND</div>
+            <canvas id="spark"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="box">
+        <h3>Location</h3>
+        <div id="mapwrap"><div id="map"></div></div>
+        <div class="in" style="border-top:1px solid var(--line)">
+          <div class="rows">
+            <div class="row"><span class="k">Latitude</span><span class="v" id="dLat">--</span></div>
+            <div class="row"><span class="k">Longitude</span><span class="v" id="dLon">--</span></div>
+            <div class="row"><span class="k">Satellites</span><span class="v" id="dSats">--</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dgrid">
+      <div class="box">
+        <h3>Radio link</h3>
+        <div class="in"><div class="rows">
+          <div class="row"><span class="k">Signal strength</span><span class="v" id="dRssi">--</span></div>
+          <div class="row"><span class="k">Signal quality</span><span class="v" id="dSnr">--</span></div>
+          <div class="row"><span class="k">Packets received</span><span class="v" id="dPk">--</span></div>
+          <div class="row"><span class="k">Packets missed</span><span class="v" id="dMiss">--</span></div>
+        </div></div>
+      </div>
+      <div class="box">
+        <h3>Device</h3>
+        <div class="in"><div class="rows">
+          <div class="row"><span class="k">Status</span><span class="v" id="dStat">--</span></div>
+          <div class="row"><span class="k">Power source</span><span class="v" id="dPwr">--</span></div>
+          <div class="row"><span class="k">Node uptime</span><span class="v" id="dUp">--</span></div>
+          <div class="row"><span class="k">Message number</span><span class="v" id="dMsg">--</span></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>Phantom Net · <span id="fPkt">0</span> packets received</footer>
+
+<script>
+/* ==========================================================================
+   Reads the gateway's JSON lines over Web Serial (Chrome / Edge).
+   '{' lines are telemetry, '#' lines are gateway commentary and are ignored.
+   ========================================================================== */
+
+const STATUS = ['Normal','Alert','Man down','SOS'];
+const S = { nodes:new Map(), sel:null, packets:0, rows:[],
+            port:null, reader:null, sim:null, on:false };
+
+const $  = id => document.getElementById(id);
+const p2 = n => String(n).padStart(2,'0');
+const hms= s => `${Math.floor(s/3600)}h ${Math.floor(s/60)%60}m`;
+
+/* ------------------------------------------------------------ ingest */
+function onLine(line){
+  line = line.trim();
+  if(!line || !line.startsWith('{')) return;
+  let m; try{ m = JSON.parse(line); }catch(e){ return; }
+
+  if(m.t === 'event'){
+    const n = S.nodes.get(m.node);
+    if(n){ n.online = m.event === 'online'; paint(); }
+    return;
+  }
+  if(m.t !== 'data') return;
+
+  S.packets++;
+  let n = S.nodes.get(m.node);
+  if(!n){ n = {node:m.node, packets:0, hist:[]}; S.nodes.set(m.node,n); }
+  Object.assign(n, m, {online:true, seen:Date.now()});
+  n.packets++;
+  if(m.hr){ n.hist.push(m.hr); if(n.hist.length>40) n.hist.shift(); }
+
+  S.rows.push({time:new Date().toISOString(), ...m});
+  paint();
+}
+
+/* ------------------------------------------------------------- render */
+function paint(){
+  const now = Date.now();
+  const all = [...S.nodes.values()].sort((a,b)=>a.node-b.node);
+  const live = all.filter(n => now - n.seen < 30000);
+
+  $('empty').style.display = all.length ? 'none' : 'block';
+  $('count').textContent   = `${live.length} online`;
+  $('fPkt').textContent    = S.packets;
+
+  /* --- emergency banner --- */
+  const bad = live.filter(n => n.status >= 2);
+  const a = $('alert');
+  if(bad.length){
+    a.style.display = 'flex';
+    $('alertT').textContent = bad.length > 1
+      ? `${bad.length} nodes need help`
+      : `Node ${p2(bad[0].node)} — ${STATUS[bad[0].status]}`;
+    $('alertD').textContent = bad.map(n =>
+      n.fix ? `${n.lat.toFixed(5)}, ${n.lon.toFixed(5)}` : 'no GPS fix').join(' · ');
+  } else a.style.display = 'none';
+
+  /* --- grid --- */
+  const g = $('grid');
+  g.innerHTML = '';
+  all.forEach(n => {
+    const stale = now - n.seen > 30000;
+    const st = stale ? 'off' : 's' + n.status;
+    const bg = stale ? 'boff' : 'b' + n.status;
+    const lb = stale ? 'Offline' : STATUS[n.status];
+    const bars = n.rssi > -60 ? 4 : n.rssi > -80 ? 3 : n.rssi > -100 ? 2 : 1;
+
+    const d = document.createElement('div');
+    d.className = 'card ' + st;
+    d.innerHTML = `
+      <div class="ctop">
+        <div>
+          <div class="cname">Node ${p2(n.node)}</div>
+          <div class="cmeta">${stale ? 'last seen ' + Math.round((now-n.seen)/1000) + 's ago'
+                                     : 'updated ' + Math.round((now-n.seen)/1000) + 's ago'}</div>
+        </div>
+        <span class="badge ${bg}">${lb}</span>
+      </div>
+      <div class="vitals">
+        <div class="vit"><div class="n">${n.hr||'--'}<small> bpm</small></div><div class="l">HEART</div></div>
+        <div class="vit"><div class="n">${n.spo2||'--'}<small> %</small></div><div class="l">OXYGEN</div></div>
+        <div class="vit"><div class="n">${n.batt||'--'}<small> %</small></div><div class="l">BATTERY</div></div>
+      </div>
+      <div class="cfoot">
+        <span class="sig">
+          <span class="bars">${[1,2,3,4].map(i=>`<i class="${i<=bars&&!stale?'a':''}"></i>`).join('')}</span>
+          ${n.rssi ?? '--'} dBm
+        </span>
+        <span>${n.fix ? '📍 GPS fix' : 'no GPS'}</span>
+      </div>`;
+    d.onclick = () => open(n.node);
+    g.appendChild(d);
+  });
+
+  if(S.sel !== null) detail();
+}
+
+/* ------------------------------------------------------------- detail */
+function open(id){
+  S.sel = id;
+  $('list').style.display = 'none';
+  $('detail').style.display = 'block';
+  detail();
+  setTimeout(() => { if(map) map.invalidateSize(); }, 60);
+  window.scrollTo(0,0);
+}
+$('bBack').onclick = () => {
+  S.sel = null;
+  $('detail').style.display = 'none';
+  $('list').style.display = 'block';
+};
+
+function detail(){
+  const n = S.nodes.get(S.sel); if(!n) return;
+  const stale = Date.now() - n.seen > 30000;
+
+  $('dName').textContent  = `Node ${p2(n.node)}`;
+  $('dBadge').textContent = stale ? 'Offline' : STATUS[n.status];
+  $('dBadge').className   = 'badge ' + (stale ? 'boff' : 'b' + n.status);
+  $('dSeen').textContent  = `updated ${Math.round((Date.now()-n.seen)/1000)}s ago`;
+
+  $('dHr').innerHTML  = (n.hr   || '--') + '<small> bpm</small>';
+  $('dSpo').innerHTML = (n.spo2 || '--') + '<small> %</small>';
+  $('dAcc').innerHTML = (n.amag != null ? n.amag.toFixed(2) : '--') + '<small> g</small>';
+  $('dBat').innerHTML = (n.batt || '--') + '<small> %</small>';
+
+  $('dHr').style.color  = (n.hr > 120 || (n.hr && n.hr < 45)) ? 'var(--red)' : '';
+  $('dAcc').style.color = n.amag > 2.5 ? 'var(--red)' : '';
+
+  $('dLat').textContent  = n.fix ? n.lat.toFixed(6) : '—';
+  $('dLon').textContent  = n.fix ? n.lon.toFixed(6) : '—';
+  $('dSats').textContent = n.sats ?? '—';
+  $('dRssi').textContent = (n.rssi ?? '--') + ' dBm';
+  $('dSnr').textContent  = (n.snr != null ? n.snr.toFixed(1) : '--') + ' dB';
+  $('dPk').textContent   = n.packets;
+  $('dMiss').textContent = n.missed ?? 0;
+  $('dStat').textContent = STATUS[n.status];
+  $('dPwr').textContent  = n.batt ? 'Battery' : 'USB';
+  $('dUp').textContent   = n.uptime != null ? hms(n.uptime) : '—';
+  $('dMsg').textContent  = '#' + (n.msg ?? '--');
+
+  spark(n.hist);
+  if(n.fix) mark(n);
+}
+
+/* --------------------------------------------------------- sparkline */
+function spark(d){
+  const c = $('spark'), x = c.getContext('2d');
+  const w = c.width = c.offsetWidth * 2, h = c.height = 140;
+  x.scale(1,1); x.clearRect(0,0,w,h);
+  if(!d || d.length < 2){
+    x.fillStyle = '#5b6879'; x.font = '22px system-ui';
+    x.fillText('collecting…', 10, h/2); return;
+  }
+  const lo = Math.min(...d) - 4, hi = Math.max(...d) + 4;
+  const px = i => (i/(d.length-1)) * (w-8) + 4;
+  const py = v => h - 12 - ((v-lo)/(hi-lo||1)) * (h-26);
+
+  const g = x.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,'rgba(34,211,238,.35)'); g.addColorStop(1,'rgba(34,211,238,0)');
+  x.beginPath(); x.moveTo(px(0),h);
+  d.forEach((v,i)=>x.lineTo(px(i),py(v)));
+  x.lineTo(px(d.length-1),h); x.closePath(); x.fillStyle=g; x.fill();
+
+  x.beginPath();
+  d.forEach((v,i)=> i?x.lineTo(px(i),py(v)):x.moveTo(px(i),py(v)));
+  x.strokeStyle='#22d3ee'; x.lineWidth=3; x.lineJoin='round'; x.stroke();
+
+  x.beginPath(); x.arc(px(d.length-1),py(d[d.length-1]),6,0,7);
+  x.fillStyle='#22d3ee'; x.fill();
+}
+
+/* --------------------------------------------------------------- map */
+let map=null, marks={};
+function initMap(){
+  try{
+    map = L.map('map',{zoomControl:true,attributionControl:false}).setView([20.6,78.9],5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+  }catch(e){
+    $('mapwrap').innerHTML='<div class="nomap">Map needs an internet connection.<br>Coordinates are shown below.</div>';
+  }
+}
+function mark(n){
+  if(!map) return;
+  const ll=[n.lat,n.lon];
+  if(!marks[n.node]){
+    marks[n.node]=L.circleMarker(ll,{radius:9,color:'#22d3ee',fillColor:'#22d3ee',
+      fillOpacity:.9,weight:3}).addTo(map).bindTooltip('Node '+p2(n.node));
+    map.setView(ll,17);
+  } else marks[n.node].setLatLng(ll);
+  if(S.sel===n.node) map.panTo(ll);
+}
+
+/* ------------------------------------------------------- web serial */
+async function connect(){
+  if(S.on){ return disconnect(); }
+  if(!('serial' in navigator)){
+    $('hint').style.display='block';
+    $('hint').textContent='This browser cannot talk to USB devices. Open this file in Chrome or Edge — or press Demo to preview without hardware.';
+    return;
+  }
+  try{
+    S.port = await navigator.serial.requestPort();
+    await S.port.open({baudRate:115200});
+    S.on = true;
+    $('pill').classList.add('on'); $('pillt').textContent='Connected';
+    $('bConn').textContent='Disconnect';
+    $('hint').style.display='none';
+    read();
+  }catch(e){
+    $('hint').style.display='block';
+    $('hint').textContent='Could not open the port: '+e.message+
+      '  ·  Close the Arduino Serial Monitor first — only one program can use a COM port at a time.';
+  }
+}
+async function read(){
+  const dec = new TextDecoderStream();
+  S.port.readable.pipeTo(dec.writable).catch(()=>{});
+  S.reader = dec.readable.getReader();
+  let buf='';
+  try{
+    while(true){
+      const {value,done} = await S.reader.read();
+      if(done) break;
+      buf += value;
+      let i;
+      while((i = buf.indexOf('\n')) >= 0){ onLine(buf.slice(0,i)); buf = buf.slice(i+1); }
+      if(buf.length > 8192) buf = '';
+    }
+  }catch(e){}
+}
+async function disconnect(){
+  try{ if(S.reader) await S.reader.cancel(); }catch(e){}
+  try{ if(S.port) await S.port.close(); }catch(e){}
+  S.on=false; S.port=null; S.reader=null;
+  $('pill').classList.remove('on'); $('pillt').textContent='Not connected';
+  $('bConn').textContent='Connect gateway';
+}
+
+/* ------------------------------------------------------------- demo */
+function demo(){
+  if(S.sim){
+    clearInterval(S.sim); S.sim=null;
+    $('bSim').textContent='Demo';
+    $('pill').classList.remove('on'); $('pillt').textContent='Not connected';
+    return;
+  }
+  $('bSim').textContent='Stop demo';
+  $('pill').classList.add('on'); $('pillt').textContent='Demo mode';
+  let t=0, msg=0;
+  const home={1:{lat:19.0760,lon:72.8777},2:{lat:19.0771,lon:72.8792}};
+  S.sim=setInterval(()=>{
+    t++;
+    [1,2].forEach(id=>{
+      let status=0;
+      if(id===1){ const p=t%24; status = p<16?0:(p<19?1:2); }
+      const hr=Math.round((status===2?126:status===1?95:73)+Math.sin(t/3+id)*4);
+      onLine(JSON.stringify({
+        t:'data', node:id, msg:++msg, status, alarm:status>=2,
+        hr, spo2:96+Math.round(Math.sin(t/5)*2),
+        amag: status===2 ? 3.1+Math.random() : 1.01+Math.random()*.05,
+        fix:true, sats:9,
+        lat:home[id].lat+Math.sin(t/18)*.0004,
+        lon:home[id].lon+Math.cos(t/18)*.0004,
+        batt:Math.max(15,94-Math.floor(t/10)),
+        rssi:-52-Math.round(Math.random()*20)-(id-1)*6,
+        snr:9+Math.random()*4, uptime:t*2, missed:0
+      }));
+    });
+  },2000);
+}
+
+/* ----------------------------------------------------------- export */
+$('bCsv').onclick=()=>{
+  if(!S.rows.length) return;
+  const cols=['time','node','status','hr','spo2','amag','batt','rssi','snr','lat','lon','sats','uptime','missed'];
+  const csv=[cols.join(',')].concat(S.rows.map(r=>cols.map(c=>r[c]??'').join(','))).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`phantomnet_${Date.now()}.csv`; a.click();
+};
+
+$('bConn').onclick=connect;
+$('bSim').onclick=demo;
+setInterval(paint,1000);
+initMap(); paint();
+</script>
+</body>
+</html>
